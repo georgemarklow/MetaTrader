@@ -1,0 +1,179 @@
+#property indicator_separate_window
+#property indicator_buffers 4
+#property indicator_color1 Blue
+#property indicator_color2 Green
+#property indicator_color3 Red
+#property indicator_width1 1
+#property indicator_width2 2
+#property indicator_width3 2
+
+extern int        KPeriod = 5;
+extern int        DPeriod = 3;
+extern int        Slowing = 3;
+extern int        MaPeriod1 = 10;
+extern int        MaPeriod2 = 50;
+extern int        MaPeriod3 = 200;
+
+double StochLineBuffer[];
+double bullishDivergence[];
+double bearishDivergence[];
+double StochDiv[];
+
+int init()
+  {
+   SetIndexStyle(0,DRAW_LINE,STYLE_SOLID,0);
+   SetIndexStyle(1,DRAW_ARROW,STYLE_SOLID,0);
+   SetIndexStyle(2,DRAW_ARROW,STYLE_SOLID,0);
+   SetIndexStyle(3,DRAW_NONE);
+
+   SetIndexBuffer(0,StochLineBuffer);
+   SetIndexBuffer(1,bullishDivergence);
+   SetIndexBuffer(2,bearishDivergence);
+   SetIndexBuffer(3,StochDiv);
+
+   SetIndexArrow(1,233);
+   SetIndexArrow(2,234);
+
+   IndicatorDigits(Digits+2);
+
+   return(0);
+  }
+
+int deinit()
+  {
+   for(int i=ObjectsTotal()-1; i>=0; i--)
+     {
+      string label=ObjectName(i);
+      if(StringSubstr(label,0,14)!="DivergenceLine")
+         continue;
+      ObjectDelete(label);
+     }
+   return(0);
+  }
+
+int start()
+  {
+   int counted_bars=IndicatorCounted();
+   if(counted_bars<0) return(-1);
+   if(counted_bars>0) counted_bars--;
+   int limit=Bars-counted_bars;
+   if(counted_bars==0) limit-=1+MathMax(KPeriod,DPeriod);
+ 
+   CalculateIndicator(limit);
+   return(0);
+  }
+
+void CalculateIndicator(int countedBars)
+  {
+   for(int i=countedBars; i>=0; i--)
+     {
+      double ma =  iMA(NULL,0,MaPeriod1,0,MODE_SMA,PRICE_CLOSE,i);
+      double ma2 = iMA(NULL,0,MaPeriod2,0,MODE_SMA,PRICE_CLOSE,i); 
+      double ma3 = iMA(NULL,0,MaPeriod3,0,MODE_SMA,PRICE_CLOSE,i);
+          
+      CalculateStochDiv(i);
+      CatchBullishDivergence(i+2,countedBars, ma, ma2, ma3);
+      CatchBearishDivergence(i+2,countedBars, ma, ma2, ma3);
+     }
+  }
+
+void CalculateStochDiv(int i)
+  {
+   StochLineBuffer[i]=iStochastic(Symbol(),0,KPeriod,DPeriod,Slowing,MODE_SMA,0,MODE_MAIN,i);
+   StochDiv[i]=StochLineBuffer[i];
+  }
+
+void CatchBullishDivergence(int shift,int maxind, double ma, double ma2, double ma3)
+  {
+   if(IsIndicatorTrough(shift)==false)
+      return;
+   int currentTrough=shift;
+   int lastTrough=GetIndicatorLastTrough(shift,maxind);
+ 
+   if(currentTrough==-1) return;
+   if(lastTrough==-1) return;
+   
+   bool isBullishMA = Close[currentTrough] > ma && Close[currentTrough] > ma2 && Close[currentTrough] > ma3;
+   bool stoDivType1Found = StochDiv[currentTrough]>StochDiv[lastTrough] && Low[currentTrough]<Low[lastTrough];
+   bool stoDivType2Found = StochDiv[currentTrough]<StochDiv[lastTrough] && Low[currentTrough]>Low[lastTrough];
+   
+   if (isBullishMA && (stoDivType1Found || stoDivType2Found))
+   {
+      bullishDivergence[currentTrough]=StochDiv[currentTrough];
+   }
+  }
+
+
+void CatchBearishDivergence(int shift,int maxind, double ma, double ma2, double ma3)
+  {
+   if(IsIndicatorPeak(shift)==false)
+      return;
+   int currentPeak=shift;
+   int lastPeak=GetIndicatorLastPeak(shift,maxind);
+ 
+   if(currentPeak==-1) return;
+   if(lastPeak==-1) return;
+   
+   bool isBearishMA = Close[currentPeak] < ma && Close[currentPeak] < ma2 && Close[currentPeak] < ma3;
+   bool stoDivType1Found = StochDiv[currentPeak]<StochDiv[lastPeak] && High[currentPeak]>High[lastPeak];
+   bool stoDivType2Found = StochDiv[currentPeak]>StochDiv[lastPeak] && High[currentPeak]<High[lastPeak];
+   
+   if (isBearishMA && (stoDivType1Found || stoDivType2Found))
+   {
+      bearishDivergence[currentPeak]=StochDiv[currentPeak];
+   } 
+}
+
+bool IsIndicatorPeak(int shift)
+  {
+   if(StochDiv[shift]>=StochDiv[shift+1] && StochDiv[shift]>StochDiv[shift+2] && 
+      StochDiv[shift]>StochDiv[shift-1])
+      return(true);
+   else
+      return(false);
+  }
+
+bool IsIndicatorTrough(int shift)
+  {
+   if(StochDiv[shift]<=StochDiv[shift+1] && StochDiv[shift]<StochDiv[shift+2] && 
+      StochDiv[shift]<StochDiv[shift-1])
+      return(true);
+   else
+      return(false);
+  }
+
+int GetIndicatorLastPeak(int shift,int maxind)
+  {
+   for(int i=shift+5; i<maxind-2; i++)
+     {
+      if(StochLineBuffer[i] >= StochLineBuffer[i+1] && StochLineBuffer[i] >= StochLineBuffer[i+2] &&
+         StochLineBuffer[i] >= StochLineBuffer[i-1] && StochLineBuffer[i] >= StochLineBuffer[i-2])
+        {
+         for(int j=i; j<maxind-2; j++)
+           {
+            if(StochDiv[j] >= StochDiv[j+1] && StochDiv[j] > StochDiv[j+2] &&
+               StochDiv[j] >= StochDiv[j-1] && StochDiv[j] > StochLineBuffer[j-2])
+               return(j);
+           }
+        }
+     }
+   return(-1);
+  }
+
+int GetIndicatorLastTrough(int shift,int maxind)
+  {
+   for(int i=shift+5; i<maxind-2; i++)
+     {
+      if(StochLineBuffer[i] <= StochLineBuffer[i+1] && StochLineBuffer[i] <= StochLineBuffer[i+2] &&
+         StochLineBuffer[i] <= StochLineBuffer[i-1] && StochLineBuffer[i] <= StochLineBuffer[i-2])
+        {
+         for(int j=i; j<maxind-2; j++)
+           {
+            if(StochDiv[j] <= StochDiv[j+1] && StochDiv[j] < StochDiv[j+2] &&
+               StochDiv[j] <= StochDiv[j-1] && StochDiv[j] < StochDiv[j-2])
+               return(j);
+           }
+        }
+     }
+   return(-1);
+  }
