@@ -1,0 +1,102 @@
+#property indicator_chart_window
+#property indicator_buffers 2
+#property indicator_color1 Red
+#property indicator_color2 Blue
+
+extern int Period1 = 50;
+extern int Period2 = 100;
+extern int Period3 = 200;
+extern int Period4 = 500;
+extern int Period5 = 1000;
+
+double upArrow[];
+double downArrow[];
+string PatternText[5000];
+
+int init() 
+  {
+   SetIndexStyle(0, DRAW_ARROW, 0, 1);
+   SetIndexArrow(0, 234);
+   SetIndexBuffer(0, downArrow);      
+
+   SetIndexStyle(1, DRAW_ARROW, 0, 1);
+   SetIndexArrow(1, 233);
+   SetIndexBuffer(1, upArrow);
+      
+   return(0);
+  }
+
+int deinit() 
+  {
+   ObjectsDeleteAll(0, OBJ_TEXT);
+   return(0);
+  }
+  
+int start()
+  {
+   double range, avgRange;
+   int counter;
+   static datetime prevtime = 0;
+   int shift;
+   
+   if(prevtime == Time[0]) 
+      return(0);
+
+   prevtime = Time[0];   
+   
+   for(int j = 0; j < Bars; j++) 
+     { 
+       PatternText[j] = "pattern-" + j;
+     }
+
+   for(shift = 0; shift < Bars; shift++) 
+     {
+       counter = shift;
+       range = 0;
+       avgRange = 0;
+       for(counter = shift; counter <= shift + 9; counter++) 
+         {
+           avgRange = avgRange + MathAbs(High[counter] - Low[counter]);
+         }
+       range = avgRange / 10;
+       
+       double shift2 = shift + 1;
+
+       double sto1 = iStochastic(NULL,1,50,3,3,MODE_SMA,0,MODE_MAIN,shift);
+       double sto2 = iStochastic(NULL,1,100,3,3,MODE_SMA,0,MODE_MAIN,shift);
+       double sto3 = iStochastic(NULL,1,200,3,3,MODE_SMA,0,MODE_MAIN,shift);
+       double sto4 = iStochastic(NULL,1,500,3,3,MODE_SMA,0,MODE_MAIN,shift);
+       double sto5 = iStochastic(NULL,1,1000,3,3,MODE_SMA,0,MODE_MAIN,shift);
+       
+       double sto1b = iStochastic(NULL,1,50,3,3,MODE_SMA,0,MODE_MAIN,shift2);
+       double sto2b = iStochastic(NULL,1,100,3,3,MODE_SMA,0,MODE_MAIN,shift2);
+       double sto3b = iStochastic(NULL,1,200,3,3,MODE_SMA,0,MODE_MAIN,shift2);
+       double sto4b = iStochastic(NULL,1,500,3,3,MODE_SMA,0,MODE_MAIN,shift2);
+       double sto5b = iStochastic(NULL,1,1000,3,3,MODE_SMA,0,MODE_MAIN,shift2);
+       
+       bool bearFilterConditionCurrent = sto1 > 90 && sto2 > 90 && sto3 > 90 && sto4 > 90 && sto5 > 90; 
+       bool bullFilterConditionCurrent = sto1 < 10  && sto2 < 10 && sto3 < 10 && sto4 < 10 && sto5 < 10;
+
+       bool bearFilterConditionPrevious = sto1b > 90 && sto2b > 90 && sto3b > 90 && sto4b > 90 && sto5b > 90; 
+       bool bullFilterConditionPrevious = sto1b < 10  && sto2b < 10 && sto3b < 10 && sto4b < 10 && sto5b < 10;
+       
+       if (!bullFilterConditionCurrent && bullFilterConditionPrevious)
+         DrawBullArrow(shift, range);
+        
+       if (!bearFilterConditionCurrent && bearFilterConditionPrevious)
+         DrawBearArrow(shift, range);
+
+     }
+   return(0);
+  }
+
+void DrawBullArrow(int i, double r)
+
+{
+   upArrow[i] = Low[i] - r*0.5;  
+}
+
+void DrawBearArrow(int i, double r)
+{
+   downArrow[i] = High[i] + r*0.5;
+}
