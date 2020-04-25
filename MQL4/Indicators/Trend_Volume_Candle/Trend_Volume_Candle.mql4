@@ -1,0 +1,115 @@
+#property indicator_chart_window
+#property indicator_buffers 2
+#property indicator_color1 Red
+#property indicator_color2 Blue
+//----
+
+extern int Period1 = 10;
+extern int Period2 = 50;
+extern int Period3 = 200;
+extern int Volume_Min = 25;
+extern int Volume_Max = 50;
+extern int Hour_Min = 8;
+extern int Hour_Max = 18;
+
+double upArrow[];
+double downArrow[];
+string PatternText[5000];
+
+int init() 
+  {
+   SetIndexStyle(0, DRAW_ARROW, 0, 1);
+   SetIndexArrow(0, 234);
+   SetIndexBuffer(0, downArrow);      
+
+   SetIndexStyle(1, DRAW_ARROW, 0, 1);
+   SetIndexArrow(1, 233);
+   SetIndexBuffer(1, upArrow);
+      
+   return(0);
+  }
+
+int deinit() 
+  {
+   ObjectsDeleteAll(0, OBJ_TEXT);
+   return(0);
+  }
+
+int start()
+  {
+   double range, avgRange;
+   int counter;
+   static datetime prevtime = 0;
+   int shift;
+   int shift1;
+   int shift2;
+   string pattern;
+   int setPattern = 0;
+   double O, O1, O2, C, C1, C2, V, V1, V2;  
+      
+   if(prevtime == Time[0]) 
+     {
+       return(0);
+     }
+   prevtime = Time[0];   
+
+   for(int j = 0; j < Bars; j++) 
+     { 
+       PatternText[j] = "pattern-" + j;
+     }
+
+   for(shift = 0; shift < Bars; shift++) 
+     {
+       avgRange = 0;
+       for(counter = shift; counter <= shift + 9; counter++) 
+         {
+           avgRange = avgRange + MathAbs(High[counter] - Low[counter]);
+         }
+       range = avgRange / 10;
+     
+       shift1 = shift + 1;
+       shift2 = shift + 2;    
+       C = Close[shift];
+       C1 = Close[shift1];
+       C2 = Close[shift2];  
+       O = Open[shift];
+       O1 = Open[shift1];
+       O2 = Open[shift2];
+       V = iVolume(NULL, 0, shift);
+       V1 = iVolume(NULL, 0, shift1);
+       V2 = iVolume(NULL, 0, shift2);
+       double rsi = iRSI(NULL,0,14,PRICE_CLOSE,shift);
+       double rsi1 = iRSI(NULL,0,14,PRICE_CLOSE,shift1);
+       double rsi2 = iRSI(NULL,0,14,PRICE_CLOSE,shift2);
+       double ma1 = iMA(NULL,0,Period1,0,MODE_SMA,PRICE_CLOSE,shift);
+       double ma2 = iMA(NULL,0,Period2,0,MODE_SMA,PRICE_CLOSE,shift);
+       double ma3 = iMA(NULL,0,Period3,0,MODE_SMA,PRICE_CLOSE,shift);
+       double hour =  TimeHour((iTime(NULL, 0, shift))); 
+       bool hourOK = hour > Hour_Min && hour < Hour_Max;
+
+       if (V2 < V1 && V1 < V && hourOK)
+       {
+            if (C2 > O2 && C1 > O1 && C > O && C > ma1 && C > ma2 && C > ma3)
+            {
+               DrawBullArrow(shift,range); 
+            }
+            
+            if (C2 < O2 && C1 < O1 && C < O && C < ma1 && C < ma2 && C < ma3)
+            {
+               DrawBearArrow(shift,range); 
+            }
+       }       
+        
+     }
+   return(0);
+  }
+
+void DrawBullArrow(int i, double r)
+{
+   upArrow[i] = Low[i] - r*0.5;  
+}
+
+void DrawBearArrow(int i, double r)
+{
+   downArrow[i] = High[i] + r*0.5;
+}
