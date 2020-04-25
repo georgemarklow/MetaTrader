@@ -1,12 +1,3 @@
-//+------------------------------------------------------------------+
-//|                                   Engulfing Pattern Recognition  |
-//+------------------------------------------------------------------+
-//|                                         Pattern Recognition.mq4  |
-//|                                Copyright © 2020, George Marklow  |
-//+------------------------------------------------------------------+
-#property copyright "Copyright © 2020, George Marklow."
-#property link      "https://github.com/georgemarklow/MetaTrader"
-
 #property indicator_chart_window
 #property indicator_buffers 2
 #property indicator_color1 Red
