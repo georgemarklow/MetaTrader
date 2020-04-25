@@ -19,10 +19,11 @@ string PatternText[5000];
 int init() 
 {
    SetIndexStyle(0, DRAW_ARROW, 0, 1);
-   SetIndexArrow(0, 72);
+   SetIndexArrow(0, 234);
    SetIndexBuffer(0, downArrow);      
+
    SetIndexStyle(1, DRAW_ARROW, 0, 1);
-   SetIndexArrow(1, 71);
+   SetIndexArrow(1, 233);
    SetIndexBuffer(1, upArrow);
       
    return(0);
@@ -36,15 +37,12 @@ int deinit()
 
 int start()
 {
-   double Range, AvgRange;
-   int counter, setalert;
+   double range, avgRange;
+   int counter;
    static datetime prevtime = 0;
-   int shift;
-   int shift1;
-   int shift2;
+   int shift, shift1, shift2;
    string pattern, period;
    int setPattern = 0;
-   int alert = 0;
    double O, O1, C, C1, L, L1, H, H1;     
 
    if(prevtime == Time[0]) 
@@ -70,16 +68,16 @@ int start()
 
    for(shift = 0; shift < Bars; shift++) 
      {
-       setalert = 0;
        counter = shift;
-       Range = 0;
-       AvgRange = 0;
+       range = 0;
+       avgRange = 0;
        for(counter = shift; counter <= shift + 9; counter++) 
        {
-         AvgRange = AvgRange + MathAbs(High[counter] - Low[counter]);
+         avgRange = avgRange + MathAbs(High[counter] - Low[counter]);
        }
-       Range = AvgRange / 10;
-       shift1 = shift + 1;     
+       range = avgRange / 10;
+       shift1 = shift + 1;   
+       shift2 = shift + 2;  
        O = Open[shift1];
        O1 = Open[shift2];
        H = High[shift1];
@@ -91,17 +89,23 @@ int start()
 
        if((C1 > O1) && (O > C) && (O >= C1) && (O1 >= C) && ((O - C) > (C1 - O1))) 
        {
-         ObjectCreate(PatternText[shift], "", 0, Time[shift1], High[shift1] + Range*1.5);
-         ObjectSetText(PatternText[shift], "Bearish Engulfing Pattern", 10, "Courier", Red);
-         downArrow[shift1] = High[shift1] + Range*0.5;
+         DrawBearArrow(shift, shift1, range);
        }
        
        if((O1 > C1) && (C > O) && (C >= O1) && (C1 >= O) && ((C - O) > (O1 - C1))) 
        {
-         ObjectCreate(PatternText[shift], "", 0, Time[shift1], Low[shift1] - Range*1.5);
-         ObjectSetText(PatternText[shift], "Bullish Engulfing Pattern", 10, "Courier", Blue);
-         upArrow[shift1] = Low[shift1] - Range*0.5;
+         DrawBullArrow(shift, shift1, range);
        }
      }
    return(0);
+}
+
+void DrawBullArrow(int shift, int shift1, double range)
+{
+   upArrow[shift1] = Low[shift1] - range*0.5;
+}
+
+void DrawBearArrow(int shift, int shift1, double range)
+{
+   downArrow[shift1] = High[shift1] + range*0.5;
 }
