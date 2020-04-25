@@ -1,0 +1,107 @@
+//+------------------------------------------------------------------+
+//|                                   Engulfing Pattern Recognition  |
+//+------------------------------------------------------------------+
+//|                                         Pattern Recognition.mq4  |
+//|                                Copyright © 2020, George Marklow  |
+//+------------------------------------------------------------------+
+#property copyright "Copyright © 2020, George Marklow."
+#property link      "https://github.com/georgemarklow/MetaTrader"
+
+#property indicator_chart_window
+#property indicator_buffers 2
+#property indicator_color1 Red
+#property indicator_color2 Blue
+
+double upArrow[];
+double downArrow[];
+string PatternText[5000];
+
+int init() 
+{
+   SetIndexStyle(0, DRAW_ARROW, 0, 1);
+   SetIndexArrow(0, 72);
+   SetIndexBuffer(0, downArrow);      
+   SetIndexStyle(1, DRAW_ARROW, 0, 1);
+   SetIndexArrow(1, 71);
+   SetIndexBuffer(1, upArrow);
+      
+   return(0);
+}
+
+int deinit() 
+{
+   ObjectsDeleteAll(0, OBJ_TEXT);
+   return(0);
+}
+
+int start()
+{
+   double Range, AvgRange;
+   int counter, setalert;
+   static datetime prevtime = 0;
+   int shift;
+   int shift1;
+   int shift2;
+   string pattern, period;
+   int setPattern = 0;
+   int alert = 0;
+   double O, O1, C, C1, L, L1, H, H1;     
+
+   if(prevtime == Time[0]) 
+     return(0);
+     
+   prevtime = Time[0];   
+
+   switch(Period()) 
+     {
+       case 1:     period = "M1";  break;
+       case 5:     period = "M5";  break;
+       case 15:    period = "M15"; break;
+       case 30:    period = "M30"; break;      
+       case 60:    period = "H1";  break;
+       case 240:   period = "H4";  break;
+       case 1440:  period = "D1";  break;
+       case 10080: period = "W1";  break;
+       case 43200: period = "MN";  break;
+     }
+
+   for(int j = 0; j < Bars; j++) 
+      PatternText[j] = "pattern-" + j;
+
+   for(shift = 0; shift < Bars; shift++) 
+     {
+       setalert = 0;
+       counter = shift;
+       Range = 0;
+       AvgRange = 0;
+       for(counter = shift; counter <= shift + 9; counter++) 
+       {
+         AvgRange = AvgRange + MathAbs(High[counter] - Low[counter]);
+       }
+       Range = AvgRange / 10;
+       shift1 = shift + 1;     
+       O = Open[shift1];
+       O1 = Open[shift2];
+       H = High[shift1];
+       H1 = High[shift2];
+       L = Low[shift1];
+       L1 = Low[shift2];
+       C = Close[shift1];
+       C1 = Close[shift2];      
+
+       if((C1 > O1) && (O > C) && (O >= C1) && (O1 >= C) && ((O - C) > (C1 - O1))) 
+       {
+         ObjectCreate(PatternText[shift], "", 0, Time[shift1], High[shift1] + Range*1.5);
+         ObjectSetText(PatternText[shift], "Bearish Engulfing Pattern", 10, "Courier", Red);
+         downArrow[shift1] = High[shift1] + Range*0.5;
+       }
+       
+       if((O1 > C1) && (C > O) && (C >= O1) && (C1 >= O) && ((C - O) > (O1 - C1))) 
+       {
+         ObjectCreate(PatternText[shift], "", 0, Time[shift1], Low[shift1] - Range*1.5);
+         ObjectSetText(PatternText[shift], "Bullish Engulfing Pattern", 10, "Courier", Blue);
+         upArrow[shift1] = Low[shift1] - Range*0.5;
+       }
+     }
+   return(0);
+}
