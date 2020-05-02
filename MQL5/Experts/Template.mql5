@@ -1,0 +1,102 @@
+#property copyright "George Marklow"
+#property link      "https://github.com/georgemarklow"
+#property version   "1.00"
+#property description ""
+
+
+int LotDigits; //initialized in OnInit
+int MagicNumber = 515019;
+int TOD_From_Hour = 08; //time of the day (from hour)
+int TOD_From_Min = 00; //time of the day (from min)
+int TOD_To_Hour = 18; //time of the day (to hour)
+int TOD_To_Min = 00; //time of the day (to min)
+double MM_Percent = 1;
+double MaxSpread = 1.0;
+int MaxSlippage = 3; //adjusted in OnInit
+int MaxSlippage_;
+bool TradeMonday = true;
+bool TradeTuesday = true;
+bool TradeWednesday = true;
+bool TradeThursday = true;
+bool TradeFriday = true;
+bool TradeSaturday = false;
+bool TradeSunday = false;
+double myPoint; //initialized in OnInit
+
+bool inTimeInterval(datetime t, int From_Hour, int From_Min, int To_Hour, int To_Min)
+  {
+   string TOD = TimeToString(t, TIME_MINUTES);
+   string TOD_From = StringFormat("%02d", From_Hour)+":"+StringFormat("%02d", From_Min);
+   string TOD_To = StringFormat("%02d", To_Hour)+":"+StringFormat("%02d", To_Min);
+   return((StringCompare(TOD, TOD_From) >= 0 && StringCompare(TOD, TOD_To) <= 0)
+     || (StringCompare(TOD_From, TOD_To) > 0
+       && ((StringCompare(TOD, TOD_From) >= 0 && StringCompare(TOD, "23:59") <= 0)
+         || (StringCompare(TOD, "00:00") >= 0 && StringCompare(TOD, TOD_To) <= 0))));
+  }
+
+double MM_Size(double SL) //Risk % per trade, SL = relative Stop Loss to calculate risk
+  {
+   double MaxLot = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MAX);
+   double MinLot = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_MIN);
+   double tickvalue = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_VALUE);
+   double ticksize = SymbolInfoDouble(Symbol(), SYMBOL_TRADE_TICK_SIZE);
+   double lots = MM_Percent * 1.0 / 100 * AccountInfoDouble(ACCOUNT_BALANCE) / (SL / ticksize * tickvalue);
+   if(lots > MaxLot) lots = MaxLot;
+   if(lots < MinLot) lots = MinLot;
+   return(lots);
+  }
+
+bool TradeDayOfWeek()
+  {
+   MqlDateTime tm;
+   TimeCurrent(tm);
+   int day = tm.day_of_week;
+   return((TradeMonday && day == 1)
+   || (TradeTuesday && day == 2)
+   || (TradeWednesday && day == 3)
+   || (TradeThursday && day == 4)
+   || (TradeFriday && day == 5)
+   || (TradeSaturday && day == 6)
+   || (TradeSunday && day == 0));
+  }
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+  {   
+   MaxSlippage_ = MaxSlippage;
+   //initialize myPoint
+   myPoint = Point();
+   if(Digits() == 5 || Digits() == 3)
+     {
+      myPoint *= 10;
+      MaxSlippage_ *= 10;
+     }
+   //initialize LotDigits
+   double LotStep = SymbolInfoDouble(Symbol(), SYMBOL_VOLUME_STEP);
+   if(LotStep >= 1) LotDigits = 0;
+   else if(LotStep >= 0.1) LotDigits = 1;
+   else if(LotStep >= 0.01) LotDigits = 2;
+   else LotDigits = 3;
+   return(INIT_SUCCEEDED);
+  }
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+  }
+
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+  {
+   ulong ticket = 0;
+   double price;   
+   double TradeSize;
+   
+  }
+//+------------------------------------------------------------------+
